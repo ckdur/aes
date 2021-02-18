@@ -37,7 +37,7 @@
 //
 //======================================================================
 
-module aes_core(
+module aes_core #(parameter integer impl_axi = 4)(
                 input wire            clk,
                 input wire            reset_n,
 
@@ -165,7 +165,7 @@ module aes_core(
                     );
 
 
-  aes_sbox sbox_inst(.sboxw(muxed_sboxw), .new_sboxw(new_sboxw));
+  aes_sbox #(.impl_axi(impl_axi)) sbox_inst(.sboxw(muxed_sboxw), .new_sboxw(new_sboxw));
 
 
   //----------------------------------------------------------------
