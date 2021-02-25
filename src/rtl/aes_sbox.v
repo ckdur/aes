@@ -883,9 +883,15 @@ module aes_sbox #(parameter integer impl_axi = 4) (
 
   generate
     if(impl_axi == 2) begin
-      sboxGated_in_aes_sbox sboxGated_in_aes_sbox(1'b0, 1'b0, sboxw, new_sboxw);
+      sboxGated_in_aes_sbox sboxGated_in_aes_sbox_0(1'b0, 1'b0, sboxw[7:0], new_sboxw[7:0]);
+      sboxGated_in_aes_sbox sboxGated_in_aes_sbox_1(1'b0, 1'b0, sboxw[15:8], new_sboxw[15:8]);
+      sboxGated_in_aes_sbox sboxGated_in_aes_sbox_2(1'b0, 1'b0, sboxw[23:16], new_sboxw[7:0]);
+      sboxGated_in_aes_sbox sboxGated_in_aes_sbox_3(1'b0, 1'b0, sboxw[31:24], new_sboxw[7:0]);
     end else if(impl_axi == 4) begin
-      sboxCanright_in_aes_sbox sboxCanright_in_aes_sbox(1'b0, 1'b0, sboxw, new_sboxw);
+      sboxCanright_in_aes_sbox sboxCanright_in_aes_sbox_0(1'b0, 1'b0, sboxw[7:0], new_sboxw[7:0]);
+      sboxCanright_in_aes_sbox sboxCanright_in_aes_sbox_1(1'b0, 1'b0, sboxw[15:8], new_sboxw[15:8]);
+      sboxCanright_in_aes_sbox sboxCanright_in_aes_sbox_2(1'b0, 1'b0, sboxw[23:16], new_sboxw[23:16]);
+      sboxCanright_in_aes_sbox sboxCanright_in_aes_sbox_3(1'b0, 1'b0, sboxw[31:24], new_sboxw[31:24]);
     end else begin
       //----------------------------------------------------------------
       // The sbox array.
