@@ -37,7 +37,10 @@
 //
 //======================================================================
 
-module aes_core #(parameter integer impl_axi = 4)(
+module aes_core #(
+                parameter integer impl_axi = 4,
+                parameter with_dec = 1
+                  )(
                 input wire            clk,
                 input wire            reset_n,
 
@@ -131,7 +134,8 @@ module aes_core #(parameter integer impl_axi = 4)(
                                .ready(enc_ready)
                               );
 
-
+  generate
+  if (with_dec) begin
   aes_decipher_block dec_block(
                                .clk(clk),
                                .reset_n(reset_n),
@@ -146,6 +150,8 @@ module aes_core #(parameter integer impl_axi = 4)(
                                .new_block(dec_new_block),
                                .ready(dec_ready)
                               );
+  end
+  endgenerate
 
 
   aes_key_mem keymem(
@@ -230,6 +236,8 @@ module aes_core #(parameter integer impl_axi = 4)(
   // Controls which of the datapaths that get the next signal, have
   // access to the memory as well as the block processing result.
   //----------------------------------------------------------------
+  generate
+  if (with_dec) begin
   always @*
     begin : encdec_mux
       enc_next = 1'b0;
@@ -252,7 +260,17 @@ module aes_core #(parameter integer impl_axi = 4)(
           muxed_ready     = dec_ready;
         end
     end // encdec_mux
-
+  end else begin
+  always @*
+    begin : encdec_nomux
+      enc_next = 1'b0;
+      enc_next        = next;
+      muxed_round_nr  = enc_round_nr;
+      muxed_new_block = enc_new_block;
+      muxed_ready     = enc_ready;
+    end // encdec_nomux
+  end
+  endgenerate
 
   //----------------------------------------------------------------
   // aes_core_ctrl
