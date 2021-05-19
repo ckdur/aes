@@ -166,7 +166,11 @@ module aes_core #(
   endgenerate
 
 
-  aes_key_mem keymem(
+  aes_key_mem  #    (
+                     .on_the_fly_keygen(on_the_fly_keygen)
+                    )
+                    keymem
+                    (
                      .clk(clk),
                      .reset_n(reset_n),
 
