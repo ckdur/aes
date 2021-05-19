@@ -39,7 +39,8 @@
 
 module aes_core #(
                 parameter integer impl_axi = 4,
-                parameter with_dec = 1
+                parameter with_dec = 0,
+                parameter on_the_fly_keygen = 1
                   )(
                 input wire            clk,
                 input wire            reset_n,
@@ -93,20 +94,27 @@ module aes_core #(
   wire           key_ready;
 
   reg            enc_next;
+  wire           enc_reset_round;
+  wire           enc_new_round;
   wire [3 : 0]   enc_round_nr;
   wire [127 : 0] enc_new_block;
   wire           enc_ready;
   wire [31 : 0]  enc_sboxw;
 
   reg            dec_next;
+  wire           dec_reset_round;
+  wire           dec_new_round;
   wire [3 : 0]   dec_round_nr;
   wire [127 : 0] dec_new_block;
   wire           dec_ready;
 
   reg [127 : 0]  muxed_new_block;
+  reg            muxed_reset_round;
+  reg            muxed_new_round;
   reg [3 : 0]    muxed_round_nr;
   reg            muxed_ready;
 
+  wire           keymem_sboxreq;
   wire [31 : 0]  keymem_sboxw;
 
   reg [31 : 0]   muxed_sboxw;
@@ -123,6 +131,8 @@ module aes_core #(
                                .next(enc_next),
 
                                .keylen(keylen),
+                               .reset_round(enc_reset_round),
+                               .new_round(enc_new_round),
                                .round(enc_round_nr),
                                .round_key(round_key),
 
@@ -143,6 +153,8 @@ module aes_core #(
                                .next(dec_next),
 
                                .keylen(keylen),
+                               .reset_round(dec_reset_round),
+                               .new_round(dec_new_round),
                                .round(dec_round_nr),
                                .round_key(round_key),
 
@@ -162,10 +174,13 @@ module aes_core #(
                      .keylen(keylen),
                      .init(init),
 
+                     .reset_round(muxed_reset_round),
+                     .new_round(muxed_new_round),
                      .round(muxed_round_nr),
                      .round_key(round_key),
                      .ready(key_ready),
 
+                     .sboxreq(keymem_sboxreq),
                      .sboxw(keymem_sboxw),
                      .new_sboxw(new_sboxw)
                     );
@@ -219,7 +234,7 @@ module aes_core #(
   //----------------------------------------------------------------
   always @*
     begin : sbox_mux
-      if (init_state)
+      if (keymem_sboxreq)
         begin
           muxed_sboxw = keymem_sboxw;
         end
@@ -247,6 +262,8 @@ module aes_core #(
         begin
           // Encipher operations
           enc_next        = next;
+          muxed_reset_round = enc_reset_round;
+          muxed_new_round = enc_new_round;
           muxed_round_nr  = enc_round_nr;
           muxed_new_block = enc_new_block;
           muxed_ready     = enc_ready;
@@ -255,6 +272,8 @@ module aes_core #(
         begin
           // Decipher operations
           dec_next        = next;
+          muxed_reset_round = dec_reset_round;
+          muxed_new_round = dec_new_round;
           muxed_round_nr  = dec_round_nr;
           muxed_new_block = dec_new_block;
           muxed_ready     = dec_ready;
@@ -265,6 +284,8 @@ module aes_core #(
     begin : encdec_nomux
       enc_next = 1'b0;
       enc_next        = next;
+      muxed_reset_round = enc_reset_round;
+      muxed_new_round = enc_new_round;
       muxed_round_nr  = enc_round_nr;
       muxed_new_block = enc_new_block;
       muxed_ready     = enc_ready;

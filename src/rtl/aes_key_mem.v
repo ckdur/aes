@@ -36,7 +36,9 @@
 //
 //======================================================================
 
-module aes_key_mem(
+module aes_key_mem#(
+                   parameter             on_the_fly_keygen = 1
+                  )(
                    input wire            clk,
                    input wire            reset_n,
 
@@ -44,11 +46,14 @@ module aes_key_mem(
                    input wire            keylen,
                    input wire            init,
 
-                   input wire    [3 : 0] round,
+                   input wire            reset_round, // Will reset. This is the equivalent of putting to 0-round
+                   input wire            new_round, // Enable-way round get (only increasing)
+                   input wire    [3 : 0] round,     // Muxed-way round get
                    output wire [127 : 0] round_key,
                    output wire           ready,
 
 
+                   output wire           sboxreq,
                    output wire [31 : 0]  sboxw,
                    input wire  [31 : 0]  new_sboxw
                   );
@@ -108,6 +113,7 @@ module aes_key_mem(
   //----------------------------------------------------------------
   // Wires.
   //----------------------------------------------------------------
+  reg           tmp_sboxreq;
   reg [31 : 0]  tmp_sboxw;
   reg           round_key_update;
   reg [127 : 0] tmp_round_key;
@@ -117,8 +123,14 @@ module aes_key_mem(
   // Concurrent assignments for ports.
   //----------------------------------------------------------------
   assign round_key = tmp_round_key;
-  assign ready     = ready_reg;
+  generate
+    if (on_the_fly_keygen)
+      assign ready     = 1'b1;
+    else
+      assign ready     = ready_reg;
+  endgenerate
   assign sboxw     = tmp_sboxw;
+  assign sboxreq   = tmp_sboxreq;
 
 
   //----------------------------------------------------------------
@@ -175,10 +187,20 @@ module aes_key_mem(
   //
   // Combinational read port for the key memory.
   //----------------------------------------------------------------
+  generate
+  if (on_the_fly_keygen) begin
+  always @(posedge clk)
+    begin : key_mem_read_simple
+      if (key_mem_we)
+        tmp_round_key <= key_mem_new;
+    end // key_mem_read_simple
+  end else begin
   always @*
     begin : key_mem_read
       tmp_round_key = key_mem[round];
     end // key_mem_read
+  end
+  endgenerate
 
 
   //----------------------------------------------------------------
@@ -191,6 +213,7 @@ module aes_key_mem(
       reg [31 : 0] w0, w1, w2, w3, w4, w5, w6, w7;
       reg [31 : 0] k0, k1, k2, k3;
       reg [31 : 0] rconw, rotstw, tw, trw;
+      reg [3 : 0] round_ctr;
 
       // Default assignments.
       key_mem_new   = 128'h0;
@@ -205,7 +228,7 @@ module aes_key_mem(
       k2 = 32'h0;
       k3 = 32'h0;
 
-      rcon_set   = 1'b1;
+      rcon_set   = round_ctr_rst; // NOTE: Is better to use this reset instead of 1'b1
       rcon_next  = 1'b0;
 
       // Extract words and calculate intermediate values.
@@ -225,16 +248,21 @@ module aes_key_mem(
       rotstw = {new_sboxw[23 : 00], new_sboxw[31 : 24]};
       trw = rotstw ^ rconw;
       tw = new_sboxw;
+      
+      tmp_sboxreq = 1'b0;
+      
+      round_ctr = on_the_fly_keygen ? round_ctr_new : round_ctr_reg;
 
       // Generate the specific round keys.
       if (round_key_update)
         begin
-          rcon_set   = 1'b0;
+          tmp_sboxreq = 1'b1;
+          //rcon_set   = 1'b0;
           key_mem_we = 1'b1;
           case (keylen)
             AES_128_BIT_KEY:
               begin
-                if (round_ctr_reg == 0)
+                if (round_ctr == 0)
                   begin
                     key_mem_new   = key[255 : 128];
                     prev_key1_new = key[255 : 128];
@@ -257,13 +285,13 @@ module aes_key_mem(
 
             AES_256_BIT_KEY:
               begin
-                if (round_ctr_reg == 0)
+                if (round_ctr == 0)
                   begin
                     key_mem_new   = key[255 : 128];
                     prev_key0_new = key[255 : 128];
                     prev_key0_we  = 1'b1;
                   end
-                else if (round_ctr_reg == 1)
+                else if (round_ctr == 1)
                   begin
                     key_mem_new   = key[127 : 0];
                     prev_key1_new = key[127 : 0];
@@ -272,7 +300,7 @@ module aes_key_mem(
                   end
                 else
                   begin
-                    if (round_ctr_reg[0] == 0)
+                    if (round_ctr[0] == 0)
                       begin
                         k0 = w0 ^ trw;
                         k1 = w1 ^ w0 ^ trw;
@@ -363,6 +391,21 @@ module aes_key_mem(
   //
   // The FSM that controls the round key generation.
   //----------------------------------------------------------------
+  generate
+  if (on_the_fly_keygen) begin
+  always @*
+    begin: key_ext
+      round_ctr_rst    = reset_round;
+      round_ctr_inc    = new_round;
+      round_key_update = reset_round || new_round;
+      
+      // Not-used assignments
+      ready_new        = 1'b0;
+      ready_we         = 1'b0;
+      key_mem_ctrl_new = CTRL_IDLE;
+      key_mem_ctrl_we  = 1'b0;
+    end
+  end else begin
   always @*
     begin: key_mem_ctrl
       reg [3 : 0] num_rounds;
@@ -425,6 +468,8 @@ module aes_key_mem(
       endcase // case (key_mem_ctrl_reg)
 
     end // key_mem_ctrl
+  end
+  endgenerate
 endmodule // aes_key_mem
 
 //======================================================================

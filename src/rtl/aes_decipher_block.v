@@ -45,6 +45,8 @@ module aes_decipher_block(
                           input wire            next,
 
                           input wire            keylen,
+                          output wire           reset_round,
+                          output wire           new_round,
                           output wire [3 : 0]   round,
                           input wire [127 : 0]  round_key,
 
@@ -239,6 +241,8 @@ module aes_decipher_block(
   //----------------------------------------------------------------
   // Concurrent connectivity for ports etc.
   //----------------------------------------------------------------
+  assign reset_round = round_ctr_set; // TODO: Not compatible
+  assign new_round = round_ctr_dec;
   assign round     = round_ctr_reg;
   assign new_block = {block_w0_reg, block_w1_reg, block_w2_reg, block_w3_reg};
   assign ready     = ready_reg;
