@@ -1054,11 +1054,11 @@ module aes_sbox #(parameter integer impl_axi = 4) (
       sboxCanright_in_aes_sbox sboxCanright_in_aes_sbox_1(1'b0, 1'b0, sboxw[15:8], new_sboxw[15:8] , , , , , , );
       sboxCanright_in_aes_sbox sboxCanright_in_aes_sbox_2(1'b0, 1'b0, sboxw[23:16], new_sboxw[23:16] , , , , , , );
       sboxCanright_in_aes_sbox sboxCanright_in_aes_sbox_3(1'b0, 1'b0, sboxw[31:24], new_sboxw[31:24] , , , , , , );
-    end else if(impl_axi == 5) begin
+    /*end else if(impl_axi == 5) begin
       aes_sbox_canright sboxCanright_in_aes_sbox_0(sboxw[7:0], new_sboxw[7:0] , , , , , , );
       aes_sbox_canright sboxCanright_in_aes_sbox_1(sboxw[15:8], new_sboxw[15:8] , , , , , , );
       aes_sbox_canright sboxCanright_in_aes_sbox_2(sboxw[23:16], new_sboxw[23:16] , , , , , , );
-      aes_sbox_canright sboxCanright_in_aes_sbox_3(sboxw[31:24], new_sboxw[31:24] , , , , , , );
+      aes_sbox_canright sboxCanright_in_aes_sbox_3(sboxw[31:24], new_sboxw[31:24] , , , , , , );*/
     end else begin
       //----------------------------------------------------------------
       // The sbox array.
